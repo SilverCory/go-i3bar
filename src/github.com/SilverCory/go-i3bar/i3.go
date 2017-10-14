@@ -1,9 +1,11 @@
 package go_i3bar
 
 import (
+	"bufio"
 	"encoding/json"
 	"io"
 	"sort"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -28,10 +30,11 @@ type Protocol struct {
 }
 
 type Click struct {
-	name     string
-	instance string
-	Button   int
-	x, y     int
+	Name     string `json:"name"`
+	Instance string `json:"instance"`
+	Button   int    `json:"button"`
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
 }
 
 type Message struct {
@@ -43,8 +46,8 @@ type Message struct {
 	Border         string `json:"border,omitempty"`
 	MinWidth       string `json:"min_width,omitempty"`
 	Align          Align  `json:"align,omitempty"`
-	name           string `json:"name,omitempty"`
-	instance       string `json:"instance,omitempty"`
+	Name           string `json:"name,omitempty"`
+	Instance       string `json:"instance,omitempty"`
 	Urgent         bool   `json:"urgent,omitempty"`
 	Separator      bool   `json:"separator,omitempty"`
 	SeparatorWidth int    `json:"separator_block_width,omitempty"`
@@ -78,9 +81,12 @@ func New(stopSignal syscall.Signal, continueSignal syscall.Signal, clickEvents b
 func (b *Bar) gatherMessages() []*Message {
 
 	ret := []*Message{}
-	for _, v := range b.handlers {
-		for _, handler := range v {
-			ret = append(ret, handler.GetMessage())
+	for name, v := range b.handlers {
+		for instance, handler := range v {
+			msg := handler.GetMessage()
+			msg.Instance = instance
+			msg.Name = name
+			ret = append(ret, msg)
 		}
 	}
 
@@ -113,6 +119,10 @@ func (b *Bar) Start() error {
 		}
 	}()
 
+	go func() {
+		running <- b.Read()
+	}()
+
 	for {
 		select {
 		case ret := <-running:
@@ -125,6 +135,34 @@ func (b *Bar) Start() error {
 	// TODO implement click via std in?
 
 	return nil
+
+}
+func (b *Bar) Read() error {
+
+	reader := bufio.NewReader(b.reader)
+	for {
+		line, _, err := reader.ReadLine()
+		if err != nil {
+			return err
+		}
+
+		msg := strings.TrimSpace(strings.TrimPrefix(string(line), ","))
+		if msg == "[" || msg == "" {
+			continue
+		}
+
+		click := &Click{}
+		err = json.Unmarshal([]byte(msg), click)
+		if err != nil {
+			return err
+		}
+
+		handler := b.FindHandler(click)
+		if handler != nil {
+			handler.Click(click)
+		}
+
+	}
 
 }
 

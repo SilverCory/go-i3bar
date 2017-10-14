@@ -9,6 +9,6 @@ go-i3bar
 TODO
 
 ## TODO
-* Implement click events.
+* Implement interrupts
 * Documentation.
 * A better readme.

@@ -1,8 +1,13 @@
 package go_i3bar
 
+import (
+	"fmt"
+	"os"
+)
+
 type Handler interface {
 	GetMessage() *Message
-	Click()
+	Click(click *Click)
 }
 
 func (b *Bar) RegisterHandler(name, instance string, handler Handler) {
@@ -19,8 +24,8 @@ func (b *Bar) RegisterHandler(name, instance string, handler Handler) {
 
 func (b *Bar) FindHandler(click *Click) Handler {
 
-	if val, ok := b.handlers[click.name]; ok {
-		if handler, ok := val[click.instance]; ok {
+	if val, ok := b.handlers[click.Name]; ok {
+		if handler, ok := val[click.Instance]; ok {
 			return handler
 		}
 	}

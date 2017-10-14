@@ -19,7 +19,7 @@ func (m *HelloWorldHandler) GetMessage() *go_i3bar.Message {
 	}
 }
 
-func (m *HelloWorldHandler) Click() {}
+func (m *HelloWorldHandler) Click(click *go_i3bar.Click) {}
 
 func TestStart(t *testing.T) {
 	duration, err := time.ParseDuration("500ms")
