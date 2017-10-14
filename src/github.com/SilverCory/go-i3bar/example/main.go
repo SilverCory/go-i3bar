@@ -15,14 +15,20 @@ type MarqueeHelloWorldHandler struct {
 }
 
 func (m *MarqueeHelloWorldHandler) GetMessage() *go_i3bar.Message {
-	if itr > len(text)-1 {
-		itr = 0
-	} else {
-		itr += 1
+	itr += 1
+	itrMaxed := itr
+
+	if itr > len(text)+12 {
+		itr = -1
 	}
+
+	if itrMaxed > len(text)-1 {
+		itrMaxed = len(text) - 1
+	}
+
 	return &go_i3bar.Message{
 		Position: 1,
-		FullText: text[:itr],
+		FullText: text[:itrMaxed],
 		MinWidth: text,
 		Urgent:   true,
 	}
