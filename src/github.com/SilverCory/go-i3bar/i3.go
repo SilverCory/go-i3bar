@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"sort"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -14,7 +15,9 @@ type Bar struct {
 	writer   io.Writer
 	reader   io.Reader
 	handlers map[string]map[string]Handler
-	exit     chan int
+
+	exit chan int
+	mux  sync.Mutex
 }
 
 type Protocol struct {
@@ -104,7 +107,7 @@ func (b *Bar) Start() error {
 	go func() {
 		for {
 			time.Sleep(b.duration)
-			if ret := b.run(); ret != nil {
+			if ret := b.Draw(); ret != nil {
 				running <- ret
 			}
 		}
@@ -125,7 +128,9 @@ func (b *Bar) Start() error {
 
 }
 
-func (b *Bar) run() error {
+func (b *Bar) Draw() error {
+	b.mux.Lock()
+
 	if status, err := json.Marshal(b.gatherMessages()); err != nil {
 		return err
 	} else {
@@ -133,6 +138,8 @@ func (b *Bar) run() error {
 			return err
 		}
 	}
+
+	b.mux.Unlock()
 
 	return nil
 }
