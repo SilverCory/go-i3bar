@@ -1,4 +1,4 @@
-package go_i3bar_test
+package go_i3bar
 
 import (
 	"github.com/SilverCory/go-i3bar"
