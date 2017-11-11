@@ -9,6 +9,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"os"
 )
 
 type Bar struct {
@@ -16,6 +17,8 @@ type Bar struct {
 	duration time.Duration
 	writer   io.Writer
 	reader   io.Reader
+	encoder *json.Encoder
+	decoder *json.Decoder
 	handlers map[string]map[string]Handler
 
 	exit chan int
@@ -101,12 +104,10 @@ func (b *Bar) gatherMessages() []*Message {
 func (b *Bar) Start() error {
 
 	b.exit = make(chan int, 1)
-	if protocol, err := json.Marshal(b.protocol); err != nil {
+	b.encoder = json.NewEncoder(b.writer)
+
+	if err := b.encoder.Encode(b.protocol); err != nil {
 		return err
-	} else {
-		if _, err := b.writer.Write([]byte(string(protocol) + "\n[\n[]\n")); err != nil {
-			return err
-		}
 	}
 
 	running := make(chan error, 1)
@@ -139,20 +140,10 @@ func (b *Bar) Start() error {
 }
 func (b *Bar) Read() error {
 
-	reader := bufio.NewReader(b.reader)
+	b.decoder = json.NewDecoder(b.reader)
 	for {
-		line, _, err := reader.ReadLine()
-		if err != nil {
-			return err
-		}
-
-		msg := strings.TrimSpace(strings.TrimPrefix(string(line), ","))
-		if msg == "[" || msg == "" {
-			continue
-		}
-
 		click := &Click{}
-		err = json.Unmarshal([]byte(msg), click)
+		err := b.decoder.Decode(click)
 		if err != nil {
 			return err
 		}
@@ -172,7 +163,7 @@ func (b *Bar) Draw() error {
 	if status, err := json.Marshal(b.gatherMessages()); err != nil {
 		return err
 	} else {
-		if _, err := b.writer.Write([]byte("," + string(status) + "\n")); err != nil {
+		if err := b.encoder.Encode(status); err != nil {
 			return err
 		}
 	}
